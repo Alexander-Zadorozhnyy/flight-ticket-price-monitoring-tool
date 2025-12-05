@@ -1,0 +1,6 @@
+dotenv
+httpx
+selenium
+webdriver_manager
+undetected_chromedriver
+standard-distutils
