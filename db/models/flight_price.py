@@ -24,6 +24,8 @@ class FlightPrice(Base):
         unique=True,
     )
     
+    found_at = Column(DateTime, nullable=False)
+    
     amount = Column(Numeric(10, 2), nullable=False)  # Using Numeric for currency
     currency = Column(String(3), default="RUB", nullable=False)
     cashback_amount = Column(Numeric(10, 2), nullable=True)

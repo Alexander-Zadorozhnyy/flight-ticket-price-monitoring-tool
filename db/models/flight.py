@@ -36,7 +36,6 @@ class Flight(Base):
     baggage_type = Column(String(50), default="not_included", nullable=False)
     baggage_weight = Column(Integer, nullable=True)  # in kg
     hand_luggage_included = Column(Boolean, default=True, nullable=False)
-    seats_available = Column(Boolean, default=True, nullable=False)
     seats_left = Column(Integer, nullable=True)
 
     price = relationship("FlightPrice", back_populates="flight")

@@ -16,6 +16,7 @@ class Request(Base):
 
     round_trip = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    status = Column(String(10), defult="init")
 
     user = relationship("User", back_populates="requests")
     routes = relationship("Route", backref="request")
