@@ -11,6 +11,7 @@ import matplotlib.colors as mcolors
 
 from trip_inverval import TripInterval
 
+# Source code https://github.com/dhowland/calendarplot/tree/main
 WEEKS_IN_MONTH = 6
 DAYS_IN_WEEK = 7
 DAY_LABELS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"]
