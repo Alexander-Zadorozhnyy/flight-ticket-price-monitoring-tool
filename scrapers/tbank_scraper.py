@@ -13,7 +13,7 @@ ddate = "2026-06-03"
 # rdate=2025-12-06 &dairport=led
 URL = f"https://www.tbank.ru/travel/flights/multi-way/LED-MOW/12-11/MOW-LED/12-14/?adults=2&children=0&infants=0&cabin=Y&composite=0"
 
-for x in range(10):
+for x in range(1):
     # ---------------------------------------------------------
     # FIND ALL FLIGHT ITEMS BASED ON YOUR EXACT HTML SNIPPET
     # ---------------------------------------------------------
@@ -22,7 +22,7 @@ for x in range(10):
     driver.get(URL)
     driver.maximize_window()
     wait = WebDriverWait(driver, 25)
-
+    print(f"{URL=}")
     # Wait for flight result list
     wait.until(
         EC.presence_of_element_located(
@@ -31,16 +31,18 @@ for x in range(10):
     )
 
     # Scroll to load all flights
-    for _ in range(5):
-        driver.execute_script("window.scrollBy(0, 600);")
-        time.sleep(1.0)
-        
+    # for _ in range(5):
+    #     driver.execute_script("window.scrollBy(0, 600);")
+    #     time.sleep(1.0)
+
     flight_items = driver.find_elements(
         By.XPATH,
         "//div[@class='VirtualList__itemsContainer_QK31k']//div[contains(@class,'VirtualList__item_qgnAF')]",
     )
 
-    print(f"Found flights: {len(flight_items)}\n") # TODO: getting only first 9 values and also add airlines cash back field
+    print(
+        f"Found flights: {len(flight_items)}\n"
+    )  # TODO: getting only first 9 values and also add airlines cash back field
 
     flights = []
 
@@ -113,6 +115,48 @@ for x in range(10):
             # Clean price text
             price = price_raw.replace("\xa0", " ").strip()
 
+        # CASHBACK PARSING - NEW CODE
+        cashback = None
+        try:
+            # Try to find cashback value in multiple possible locations
+            # Option 1: Direct from badge content
+            cashback_element = item.find_element(
+                By.CSS_SELECTOR, ".badge-desktop-module__content_T4e4l"
+            )
+            cashback = cashback_element.text.strip() if cashback_element else None
+
+            # If not found, try alternative selectors
+            if not cashback:
+                # Option 2: From the whole badge text
+                cashback_badge = item.find_element(
+                    By.CSS_SELECTOR, "[data-qa-type='CashbackBadgeValue']"
+                )
+                if cashback_badge:
+                    badge_text = cashback_badge.text.strip()
+                    # Extract just the numeric part
+                    import re
+
+                    match = re.search(r"(\d+)", badge_text)
+                    if match:
+                        cashback = match.group(1)
+
+            # Option 3: From cashback container
+            if not cashback:
+                cashback_container = item.find_element(
+                    By.CSS_SELECTOR, ".PriceLayout__cashback_B5lgb"
+                )
+                if cashback_container:
+                    # Extract numeric value from container text
+                    import re
+
+                    match = re.search(r"(\d+)", cashback_container.text)
+                    if match:
+                        cashback = match.group(1)
+
+        except Exception as e:
+            # If cashback element doesn't exist, it's okay - just means no cashback for this flight
+            cashback = None
+
         # Baggage information
         baggage_text = safe_find_text(
             By.CSS_SELECTOR, ".BaggageOffers__baggageDescription_uKNDn"
@@ -167,6 +211,7 @@ for x in range(10):
                 "price": price,
                 "baggage_included": baggage_included,
                 "seats_left": seats_left,
+                "cashback": cashback,
             }
         )
 
