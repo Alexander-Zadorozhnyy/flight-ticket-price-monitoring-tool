@@ -2,6 +2,7 @@
 # Special offers https://api.travelpayouts.com/aviasales/v3/get_special_offers?origin=LED&destination=CAN&locale=en&token=c228f38c19918db6a62df3869bd8bb2a
 # Logos http://pics.avs.io/width/height/iata.png
 # get currency http://yasen.aviasales.com/adaptors/currency.json
+
 import os
 from typing import Any, Dict, Optional
 import json
@@ -18,7 +19,6 @@ class TravelPayoutsClient:
     def __init__(
         self,
         token: str,
-        base_url: str = "http://api.travelpayouts.com",
         currency: str = "rub",
         api_request_timeout: int = 30,
     ):
@@ -30,7 +30,8 @@ class TravelPayoutsClient:
             base_url: Base URL for the API (default: "http://api.travelpayouts.com/v2")
         """
         self.token = token
-        self.base_url = base_url.rstrip("/")
+        self.base_url_v2 = "http://api.travelpayouts.com/v2"
+        self.base_url_v3 = "https://api.travelpayouts.com/aviasales/v3"
         self.currency = currency.lower()
         self.api_request_timeout = api_request_timeout
 
@@ -73,7 +74,7 @@ class TravelPayoutsClient:
             # Make the request
             with httpx.Client(timeout=self.api_request_timeout) as client:
                 response = client.get(
-                    f"{self.base_url}/v2/prices/month-matrix", params=params
+                    f"{self.base_url_v2}/v2/prices/month-matrix", params=params
                 )
                 response.raise_for_status()
                 response = response.json()
@@ -151,7 +152,7 @@ class TravelPayoutsClient:
         # Make the request
         with httpx.Client(timeout=self.api_request_timeout) as client:
             response = client.get(
-                f"{self.base_url}/prices_for_dates",
+                f"{self.base_url_v3}/prices_for_dates",
                 params=params,
             )
             response.raise_for_status()
@@ -167,7 +168,6 @@ if __name__ == "__main__":
 
     client = TravelPayoutsClient(
         token=os.getenv("TRAVEL_PAYOUTS_TOKEN"),  # type: ignore
-        base_url="http://api.travelpayouts.com/v2",
     )
     origin = "MOW"
     destination = "LED"
@@ -183,7 +183,6 @@ if __name__ == "__main__":
 
     client = TravelPayoutsClient(
         token=os.getenv("TRAVEL_PAYOUTS_TOKEN"),  # type: ignore
-        base_url="https://api.travelpayouts.com/aviasales/v3",
     )
     departure_at = "2026-04-03"
     print(

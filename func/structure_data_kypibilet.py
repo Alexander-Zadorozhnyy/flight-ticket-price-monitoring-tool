@@ -1,9 +1,11 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from datetime import datetime, timedelta
 import re
 
 
-def normalize_flight_dict(flight_dict: Dict[str, Any], departure_date: datetime) -> Dict[str, Any]:
+def normalize_flight_dict(
+    flight_dict: Dict[str, Any], departure_date: datetime
+) -> Dict[str, Any]:
     """
     Transform flight dictionary into a normalized/standardized format.
 
@@ -33,43 +35,43 @@ def normalize_flight_dict(flight_dict: Dict[str, Any], departure_date: datetime)
         normalized["operating_airlines"] = []
 
     # 2. Parse times
-    departure_time_str = flight_dict.get('departure_time', '')
-    arrival_time_str = flight_dict.get('arrival_time', '')
-    departure_airport = flight_dict.get('departure_airport', '')
-    arrival_airport = flight_dict.get('arrival_airport', '')
+    departure_time_str = flight_dict.get("departure_time", "")
+    arrival_time_str = flight_dict.get("arrival_time", "")
+    departure_airport = flight_dict.get("departure_airport", "")
+    arrival_airport = flight_dict.get("arrival_airport", "")
 
     # Parse departure datetime
     departure_dt = None
     if departure_time_str:
         try:
-            hour, minute = map(int, departure_time_str.split(':'))
+            hour, minute = map(int, departure_time_str.split(":"))
             departure_dt = datetime(
                 year=departure_date.year,
                 month=departure_date.month,
                 day=departure_date.day,
                 hour=hour,
-                minute=minute
+                minute=minute,
             )
         except (ValueError, AttributeError):
             departure_dt = None
-    
+
     # Parse duration to calculate arrival datetime
-    duration_str = flight_dict.get('duration', '')
+    duration_str = flight_dict.get("duration", "")
     hours = 0
     minutes = 0
-    
+
     if duration_str:
-        hour_match = re.search(r'(\d+)\s*ч', duration_str)
+        hour_match = re.search(r"(\d+)\s*ч", duration_str)
         if hour_match:
             hours = int(hour_match.group(1))
-        
-        minute_match = re.search(r'(\d+)\s*м', duration_str)
+
+        minute_match = re.search(r"(\d+)\s*м", duration_str)
         if minute_match:
             minutes = int(minute_match.group(1))
-    
+
     total_minutes = hours * 60 + minutes
-    normalized['duration_minutes'] = total_minutes
-    
+    normalized["duration_minutes"] = total_minutes
+
     # Calculate arrival datetime
     arrival_dt = None
     if departure_dt and total_minutes > 0:
@@ -77,23 +79,23 @@ def normalize_flight_dict(flight_dict: Dict[str, Any], departure_date: datetime)
     elif arrival_time_str:
         # Try to parse arrival time directly
         try:
-            hour, minute = map(int, arrival_time_str.split(':'))
+            hour, minute = map(int, arrival_time_str.split(":"))
             arrival_dt = datetime(
                 year=departure_date.year,
                 month=departure_date.month,
                 day=departure_date.day,
                 hour=hour,
-                minute=minute
+                minute=minute,
             )
             # If arrival time is earlier than departure time, assume next day
             if arrival_dt < departure_dt:
                 arrival_dt += timedelta(days=1)
         except (ValueError, AttributeError):
             arrival_dt = None
-    
+
     # Store datetime objects
-    normalized['departure_datetime'] = departure_dt
-    normalized['arrival_datetime'] = arrival_dt
+    normalized["departure_datetime"] = departure_dt
+    normalized["arrival_datetime"] = arrival_dt
 
     # 3. Parse airports
     normalized["departure_airport"] = flight_dict.get("departure_airport", "")
@@ -163,61 +165,21 @@ def normalize_flight_dict(flight_dict: Dict[str, Any], departure_date: datetime)
     # 9. Calculate arrival date (if departure date is known)
     # This assumes we know the departure date separately
     if departure_dt and arrival_dt:
-        normalized['flight_date'] = departure_dt.date()
-        normalized['arrival_date'] = arrival_dt.date()
-        normalized['overnight'] = departure_dt.date() != arrival_dt.date()
+        normalized["flight_date"] = departure_dt.date()
+        normalized["arrival_date"] = arrival_dt.date()
+        normalized["overnight"] = departure_dt.date() != arrival_dt.date()
 
     return normalized
 
 
 # Function to process multiple flights
-def normalize_flight_list(flight_dicts: List[Dict[str, Any]], departure_date: datetime) -> List[Dict[str, Any]]:
+def normalize_flight_list(
+    flight_dicts: List[Dict[str, Any]], departure_date: datetime
+) -> List[Dict[str, Any]]:
     """
     Normalize a list of flight dictionaries.
     """
     return [normalize_flight_dict(flight, departure_date) for flight in flight_dicts]
-
-
-# Function with additional date parameter for more accurate calculations
-def normalize_flight_dict_with_date(
-    flight_dict: Dict[str, Any], departure_date: datetime
-) -> Dict[str, Any]:
-    """
-    Normalize flight dictionary with departure date for accurate arrival time calculation.
-    """
-    normalized = normalize_flight_dict(flight_dict, departure_date)
-
-    # Calculate actual arrival datetime
-    departure_time_str = normalized["departure_time"]
-    duration_minutes = normalized["duration_total_minutes"]
-
-    if departure_time_str and duration_minutes > 0:
-        try:
-            # Parse departure time
-            departure_hour, departure_minute = map(int, departure_time_str.split(":"))
-
-            # Create departure datetime
-            departure_dt = datetime(
-                year=departure_date.year,
-                month=departure_date.month,
-                day=departure_date.day,
-                hour=departure_hour,
-                minute=departure_minute,
-            )
-
-            # Calculate arrival datetime
-            arrival_dt = departure_dt + timedelta(minutes=duration_minutes)
-
-            normalized["departure_datetime"] = departure_dt.isoformat()
-            normalized["arrival_datetime"] = arrival_dt.isoformat()
-            normalized["arrival_date"] = arrival_dt.date().isoformat()
-
-        except (ValueError, AttributeError):
-            normalized["departure_datetime"] = None
-            normalized["arrival_datetime"] = None
-            normalized["arrival_date"] = None
-
-    return normalized
 
 
 # Function to create structured output with specific fields
@@ -232,13 +194,13 @@ def create_structured_flight_output(flight_dict: Dict[str, Any]) -> Dict[str, An
         "airline": normalized["main_airline"],
         "operating_airlines": normalized["operating_airlines"],
         # Route info
-        'departure': {
-            'airport': normalized.get('departure_airport'),
-            'datetime': normalized.get('departure_datetime').isoformat(),
+        "departure": {
+            "airport": normalized.get("departure_airport"),
+            "datetime": normalized.get("departure_datetime").isoformat(),
         },
-        'arrival': {
-            'airport': normalized.get('arrival_airport'),
-            'datetime': normalized.get('arrival_datetime').isoformat(),
+        "arrival": {
+            "airport": normalized.get("arrival_airport"),
+            "datetime": normalized.get("arrival_datetime").isoformat(),
         },
         # Flight details
         "duration": {
@@ -338,490 +300,3 @@ def compare_flights(flight1: Dict[str, Any], flight2: Dict[str, Any]) -> Dict[st
     }
 
     return comparison
-
-
-# if __name__ == "__main__":
-#     flights = [
-#         {
-#             "airline": "DP,FV,SU",
-#             "departure_time": "21:25",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:50",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "6 744 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,FV,SU",
-#             "departure_time": "20:45",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:15",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "6 688 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,FV,SU",
-#             "departure_time": "21:25",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:50",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "6 715 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,SU",
-#             "departure_time": "21:25",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:50",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "6 675 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,FV,SU",
-#             "departure_time": "16:05",
-#             "departure_airport": "LED",
-#             "arrival_time": "17:25",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 20м",
-#             "stop_type": "Без пересадок",
-#             "price": "6 936 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,FV,SU",
-#             "departure_time": "20:45",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:15",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "6 744 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,SU",
-#             "departure_time": "20:45",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:15",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "6 690 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,FV,SU",
-#             "departure_time": "16:05",
-#             "departure_airport": "LED",
-#             "arrival_time": "17:25",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 20м",
-#             "stop_type": "Без пересадок",
-#             "price": "6 936 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,SU",
-#             "departure_time": "16:05",
-#             "departure_airport": "LED",
-#             "arrival_time": "17:25",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 20м",
-#             "stop_type": "Без пересадок",
-#             "price": "6 936 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP",
-#             "departure_time": "21:25",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:50",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 008 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "SU,FV,SU",
-#             "departure_time": "10:00",
-#             "departure_airport": "LED",
-#             "arrival_time": "11:25",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "FV,SU",
-#             "departure_time": "08:00",
-#             "departure_airport": "LED",
-#             "arrival_time": "09:25",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP",
-#             "departure_time": "20:45",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:15",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 008 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "SU,FV,SU",
-#             "departure_time": "10:00",
-#             "departure_airport": "LED",
-#             "arrival_time": "11:25",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "FV,SU",
-#             "departure_time": "08:00",
-#             "departure_airport": "LED",
-#             "arrival_time": "09:25",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "FV,SU",
-#             "departure_time": "07:00",
-#             "departure_airport": "LED",
-#             "arrival_time": "08:30",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "SU,FV,SU",
-#             "departure_time": "06:00",
-#             "departure_airport": "LED",
-#             "arrival_time": "07:30",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "FV,SU",
-#             "departure_time": "07:00",
-#             "departure_airport": "LED",
-#             "arrival_time": "08:30",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "SU",
-#             "departure_time": "10:00",
-#             "departure_airport": "LED",
-#             "arrival_time": "11:25",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "FV,SU",
-#             "departure_time": "08:30",
-#             "departure_airport": "LED",
-#             "arrival_time": "10:05",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 35м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "SU,FV,SU",
-#             "departure_time": "06:00",
-#             "departure_airport": "LED",
-#             "arrival_time": "07:30",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "FV,SU,SU",
-#             "departure_time": "08:00",
-#             "departure_airport": "LED",
-#             "arrival_time": "09:25",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "FV,SU,SU",
-#             "departure_time": "07:00",
-#             "departure_airport": "LED",
-#             "arrival_time": "08:30",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "SU",
-#             "departure_time": "06:00",
-#             "departure_airport": "LED",
-#             "arrival_time": "07:30",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "FV,SU",
-#             "departure_time": "08:30",
-#             "departure_airport": "LED",
-#             "arrival_time": "10:05",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 35м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP",
-#             "departure_time": "16:05",
-#             "departure_airport": "LED",
-#             "arrival_time": "17:25",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 20м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 408 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "FV,SU,SU",
-#             "departure_time": "08:30",
-#             "departure_airport": "LED",
-#             "arrival_time": "10:05",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 35м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 108 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,FV,SU",
-#             "departure_time": "21:25",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:50",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 585 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,FV,SU",
-#             "departure_time": "21:25",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:50",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 585 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,FV,SU",
-#             "departure_time": "21:25",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:50",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 585 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,SU",
-#             "departure_time": "21:25",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:50",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 585 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,FV,SU",
-#             "departure_time": "20:45",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:15",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 585 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,FV,SU",
-#             "departure_time": "20:45",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:15",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 585 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,SU",
-#             "departure_time": "20:45",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:15",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 585 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,FV,SU",
-#             "departure_time": "20:45",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:15",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 585 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP",
-#             "departure_time": "21:25",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:50",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 708 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,5N",
-#             "departure_time": "21:25",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:50",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 712 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP",
-#             "departure_time": "20:45",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:15",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 708 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "DP,5N",
-#             "departure_time": "20:45",
-#             "departure_airport": "LED",
-#             "arrival_time": "22:15",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 30м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 712 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#         {
-#             "airline": "SU,FV,SU",
-#             "departure_time": "10:00",
-#             "departure_airport": "LED",
-#             "arrival_time": "11:25",
-#             "arrival_airport": "SVO",
-#             "duration": "1ч 25м",
-#             "stop_type": "Без пересадок",
-#             "price": "7 833 ₽",
-#             "baggage_included": False,
-#             "seats_left": None,
-#         },
-#     ]
-    
-    
