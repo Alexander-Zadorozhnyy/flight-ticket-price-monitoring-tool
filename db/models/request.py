@@ -2,10 +2,10 @@ from __future__ import annotations
 from datetime import datetime
 from sqlalchemy.orm import relationship
 from sqlalchemy import ForeignKey, DateTime, Column, Boolean, String, Integer
-from models.base import Base
+from models.base import BaseModel
 
 
-class Request(Base):
+class Request(BaseModel):
     __tablename__ = "requests"
 
     id = Column(primary_key=True)

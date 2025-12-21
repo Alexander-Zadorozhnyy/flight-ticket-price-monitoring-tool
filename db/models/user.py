@@ -3,14 +3,14 @@ from typing import Optional
 from sqlalchemy.orm import relationship
 from sqlalchemy import String, Integer, Column
 
-from db.models.base import Base
+from db.models.base import BaseModel
 
 
-class User(Base):
+class User(BaseModel):
     __tablename__ = "users"
 
     id: int = Column(Integer, primary_key=True)
-    telegram_id: str = Column(String, unique=True, index=True)
+    telegram_id: int = Column(Integer, unique=True, index=True)
     username: Optional[str] = Column(String(100))
     first_name: Optional[str] = Column(String(100))
     last_name: Optional[str] = Column(String(100))
