@@ -39,4 +39,4 @@ class Flight(BaseModel):
     seats_left = Column(Integer, nullable=True)
 
     price = relationship("FlightPrice", back_populates="flight")
-    route = relationship("Route", back_populates="flight")
+    route = relationship("Route", back_populates="flights")

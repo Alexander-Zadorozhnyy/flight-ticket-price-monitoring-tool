@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from config import DB_NAME
+from db.config import DB_NAME
 
 dotenv_path = os.path.join(os.getcwd(), ".env")
 if os.path.exists(dotenv_path):

@@ -40,13 +40,14 @@ def init_database(db_name):
     DATABASE_URL = f"postgresql://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{db_name}?sslmode=disable"
     engine = create_engine(
         DATABASE_URL,
-        pool_pre_ping=True,  # good for avoiding stale connections
+        pool_pre_ping=True,
         pool_recycle=1800,
         future=True,
     )
+
     Base.metadata.create_all(engine, Base.metadata.tables.values(), checkfirst=True)
     print("Done.")
 
 
 if __name__ == "__main__":
-    init_database("localdb")
+    init_database("price-monitoring")

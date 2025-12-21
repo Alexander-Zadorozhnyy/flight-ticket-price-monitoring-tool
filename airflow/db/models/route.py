@@ -27,5 +27,5 @@ class Route(BaseModel):
         String(10), nullable=False, default="to_destination"
     )  # 'to_destination', 'return'
 
-    flights = relationship("Flight", backref="route")
+    flights = relationship("Flight", back_populates="route")
     request = relationship("Request", back_populates="routes")

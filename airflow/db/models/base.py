@@ -6,7 +6,6 @@ from sqlalchemy import DateTime, Numeric, inspect
 Base = declarative_base()
 
 
-
 class BaseModel(Base):
     __abstract__ = True
 
