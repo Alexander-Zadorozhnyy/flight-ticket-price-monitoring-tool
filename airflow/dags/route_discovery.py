@@ -13,9 +13,9 @@ from func.trip_inverval import generate_trip_intervals
 default_args = {"owner": "alex_zdrn", "retries": 5, "retry_delay": timedelta(minutes=5)}
 
 with DAG(
-    "route_discovery_dag_v15",
+    "route_discovery_dag",
     default_args=default_args,
-    schedule="0 */3 * * *",
+    schedule="*/5 * * * *",
     catchup=False,
     tags=["routes"],
 ) as dag:
