@@ -22,9 +22,8 @@ class Route(BaseModel):
     departure_date = Column(DateTime, nullable=False)
     arrival = Column(String(10), nullable=False, index=True)
 
-    is_direct = Column(Boolean, default=True, nullable=False)
     route_type = Column(
-        String(10), nullable=False, default="to_destination"
+        String(20), nullable=False, default="to_destination"
     )  # 'to_destination', 'return'
 
     flights = relationship("Flight", back_populates="route")

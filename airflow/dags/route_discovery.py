@@ -3,52 +3,27 @@ from datetime import datetime, timedelta
 from typing import List
 from airflow import DAG
 from airflow.sdk import dag, task
-from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.standard.operators.python import PythonOperator
 
 from db.models.request import Request
-from db.dependencies import get_request_dao
+from db.dependencies import get_request_dao, get_route_dao
 
-# from func.trip_inverval import generate_trip_intervals
+from func.trip_inverval import generate_trip_intervals
 
 default_args = {"owner": "alex_zdrn", "retries": 5, "retry_delay": timedelta(minutes=5)}
 
-# INSERT INTO users VALUES (1, 234324, 'alex_zdrn', 'alex', 'zdrn');
-
-# INSERT INTO users (id, telegram_id, username, first_name, last_name)
-# VALUES
-#     (1, 123456789, 'john_doe', 'John', 'Doe'),
-#     (2, 987654321, 'jane_smith', 'Jane', 'Smith'),
-#     (3, 555555555, 'alex_jones', 'Alex', 'Jones'),
-#     (4, 777777777, 'sara_miller', 'Sara', 'Miller'),
-#     (5, 888888888, 'mike_brown', 'Mike', 'Brown')
-# ON CONFLICT (id) DO NOTHING;
-
-# -- Insert mock requests
-# INSERT INTO requests (user_id, departure, arrival, adults, round_trip, created_at, status)
-# VALUES
-#     -- User 1 requests
-#     (1, 'LHR', 'JFK', 2, TRUE, '2024-01-15 10:30:00', 'init'),
-#     (1, 'CDG', 'LAX', 1, FALSE, '2024-01-16 14:45:00', 'init'),
-#     (1, 'AMS', 'SFO', 3, TRUE, '2024-01-17 09:15:00', 'processed'),
-
-#     -- User 2 requests
-#     (2, 'JFK', 'LHR', 2, TRUE, '2024-01-18 11:20:00', 'init'),
-#     (2, 'LAX', 'CDG', 1, FALSE, '2024-01-19 16:30:00', 'failed'),
-#     (2, 'SFO', 'AMS', 4, TRUE, '2024-01-20 08:45:00', 'init')
-# ON CONFLICT (id) DO NOTHING;
-
 with DAG(
-    "route_discovery_dag_v12",
+    "route_discovery_dag_v15",
     default_args=default_args,
     schedule="0 */3 * * *",
     catchup=False,
     tags=["routes"],
 ) as dag:
+
     def fetch_init_requests(**context):
         dao = get_request_dao()
         requests: List[Request] = dao.get_all(status="init")
-        
+
         return [r.to_dict() for r in requests]
 
     fetch_init_requests_task = PythonOperator(
@@ -58,19 +33,40 @@ with DAG(
 
     # Task 2: Expand routes (Python function)
     def process_and_expand_routes(**context):
+        def get_options(options_dict, key, default):
+            if options_dict and key in options_dict:
+                return options_dict[key]
+            return default
+
         ti = context["ti"]
-        requests: List[Request] = ti.xcom_pull(task_ids="fetch_init_requests")
+        requests: List[dict] = ti.xcom_pull(task_ids="fetch_init_requests")
 
         # Process requests and generate intervals
         all_routes = {}
         for request in requests:
-            print(f"Processing request: {request=}")
-            # Your logic to generate intervals
-            pass
-            # intervals = generate_trip_intervals(
-            #     # ... parameters based on request ...
-            # )
-            all_routes[request.id] = 1
+            print(
+                f"Processing request: {request=}, {type(request["departure_start_period"])=}, {type(request["departure_end_period"])=}"
+            )
+
+            intervals = generate_trip_intervals(
+                start_date=datetime.fromisoformat(request["departure_start_period"]),
+                end_date=datetime.fromisoformat(request["departure_end_period"]),
+                departure_days=get_options(
+                    request.get("departure_options", {}), "preferred_days", None
+                ),
+                return_days=get_options(
+                    request.get("arrival_options", {}), "preferred_days", None
+                ),
+                desired_duration=request["duration"],
+                duration_variance=2,
+                max_intervals=100,
+            )
+            all_routes[request["id"]] = {
+                "intervals": intervals,
+                "departure": request["departure"],
+                "arrival": request["arrival"],
+                "round_trip": request["round_trip"],
+            }
 
         return all_routes
 
@@ -80,25 +76,58 @@ with DAG(
     )
 
     # Task 3: Save routes to database
-    def prepare_save_query(**context):
+    def create_routes(**context):
+        dao = get_route_dao()
+
         ti = context["ti"]
-        routes_data = ti.xcom_pull(task_ids="expand_routes")
+        routes = ti.xcom_pull(task_ids="expand_routes")
+        for request_id, interval_data in routes.items():
+            for interval in interval_data["intervals"]:
+                dao.create(
+                    {
+                        "request_id": request_id,
+                        "departure": interval_data["departure"],
+                        "arrival": interval_data["arrival"],
+                        "departure_date": interval["departure_date"],
+                        "route_type": "to_destination",
+                    }
+                )
+                if interval_data["round_trip"]:
+                    dao.create(
+                        {
+                            "request_id": request_id,
+                            "departure": interval_data["arrival"],
+                            "arrival": interval_data["departure"],
+                            "departure_date": interval["return_date"],
+                            "route_type": "return",
+                        }
+                    )
 
-        # Build dynamic SQL based on routes_data
-        # ... your query building logic ...
+        return list(routes.keys())
 
-        return "SELECT 1;"  # Placeholder SQL
-
-    prepare_query = PythonOperator(
-        task_id="prepare_save_query",
-        python_callable=prepare_save_query,
+    create_routes_task = PythonOperator(
+        task_id="create_routes",
+        python_callable=create_routes,
     )
 
-    save_routes = SQLExecuteQueryOperator(
-        task_id="save_routes",
-        conn_id="pg_tickets",
-        sql="{{ ti.xcom_pull(task_ids='prepare_save_query') }}",
+    # Task 4: Mark requests as processed
+    def mark_requests_processed(**context):
+        dao = get_request_dao()
+
+        ti = context["ti"]
+        proceed_request_ids = ti.xcom_pull(task_ids="create_routes")
+
+        dao.update_status_bulk(proceed_request_ids, new_status="data_collecting")
+
+    mark_requests_processed_task = PythonOperator(
+        task_id="mark_requests_processed",
+        python_callable=mark_requests_processed,
     )
 
     # Set task dependencies
-    fetch_init_requests_task >> expand_routes_task >> prepare_query >> save_routes
+    (
+        fetch_init_requests_task
+        >> expand_routes_task
+        >> create_routes_task
+        >> mark_requests_processed_task
+    )

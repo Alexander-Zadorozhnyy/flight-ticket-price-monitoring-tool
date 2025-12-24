@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
 from datetime import datetime, timedelta
 from typing import List, Optional
 
 import pandas as pd
+from pydantic import BaseModel
 
 
 class Weekday(Enum):
@@ -20,8 +21,7 @@ class Weekday(Enum):
     SUNDAY = 6
 
 
-@dataclass
-class TripInterval:
+class TripInterval(BaseModel):
     """Класс для хранения интервала поездки"""
 
     departure_date: datetime
@@ -35,6 +35,15 @@ class TripInterval:
             f"Длительность: {self.duration_days} дней"
         )
 
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+        
+    @classmethod
+    def parse_json(cls, json_str: str) -> 'TripInterval':
+        return cls.parse_raw(json_str)
+
 
 def generate_trip_intervals(
     start_date: Optional[datetime] = None,
@@ -44,7 +53,7 @@ def generate_trip_intervals(
     desired_duration: int = 7,
     duration_variance: int = 0,
     max_intervals: int = 100,
-) -> List[TripInterval]:
+) -> List[dict]:
     """
     Генерирует список возможных временных интервалов для поездки.
 
@@ -115,7 +124,7 @@ def generate_trip_intervals(
 
                 # Проверяем день возвращения
                 if return_days is None or return_date.weekday() in return_days:
-                    interval = TripInterval(
+                    interval = dict(
                         departure_date=current_date,
                         return_date=return_date,
                         duration_days=duration,

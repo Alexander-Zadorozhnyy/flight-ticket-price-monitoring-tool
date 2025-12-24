@@ -2,18 +2,12 @@ from typing import List
 from sqlalchemy.orm import Session
 
 from db.dao.dao import BaseDao
-from db.models.request import Request
+from db.models import Route
 
 
-class RequestDAO(BaseDao):
+class RouteDAO(BaseDao):
     def __init__(self, db: Session):
-        super().__init__(Request, db)
-
-    def update_status_bulk(self, request_ids: List[int], new_status: str):
-        self.db.query(Request).filter(Request.id.in_(request_ids)).update(
-            {Request.status: new_status}
-        )
-        self.db.commit()
+        super().__init__(Route, db)
 
     def get_all(self, skip: int = 0, limit: int = 100, status: str = "init") -> List:
         return (
