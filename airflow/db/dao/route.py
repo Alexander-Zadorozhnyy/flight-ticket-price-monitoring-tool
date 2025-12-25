@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Literal, Optional
 from sqlalchemy.orm import Session
 
 from db.dao.dao import BaseDao
@@ -9,11 +9,20 @@ class RouteDAO(BaseDao):
     def __init__(self, db: Session):
         super().__init__(Route, db)
 
-    def get_all(self, skip: int = 0, limit: int = 100, status: str = "init") -> List:
+    def get_all(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        route_type: Optional[Literal["to_destination", "return"]] = None,
+    ) -> List:
+        query = self.db.query(self.model)
+
+        if route_type:
+            query = query.filter(self.model.route_type == route_type)
+
+        return query.offset(skip).limit(limit).all()
+
+    def get_by_request_id(self, request_id: int) -> List:
         return (
-            self.db.query(self.model)
-            .filter(self.model.status == status)
-            .offset(skip)
-            .limit(limit)
-            .all()
+            self.db.query(Route).filter(Route.request_id == request_id).all()
         )

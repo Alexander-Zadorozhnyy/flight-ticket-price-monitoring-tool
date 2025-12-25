@@ -125,44 +125,47 @@ def scrape_flights(
         options.add_argument("--disable-gpu")
         options.add_argument("--window-size=1920,1080")
         options.add_argument("--disable-blink-features=AutomationControlled")
+    
+    try:
+        # Create driver in HEADLESS mode
+        with uc.Chrome(
+            options=options # service=Service(ChromeDriverManager().install()), 
+        ) as driver:
+            driver.get(url)
+            wait = WebDriverWait(driver, 25)
 
-    # Create driver in HEADLESS mode
-    with uc.Chrome(
-        service=Service(ChromeDriverManager().install()), options=options
-    ) as driver:
-        driver.get(url)
-        wait = WebDriverWait(driver, 25)
-
-        # Wait for list
-        try:
-            wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".m-result-list"))
-            )
-        except TimeoutException:
-            print("Flight results not loaded — page may be blocking headless browser")
-            # driver.save_screenshot("tripcom_timeout.png")
-            driver.quit()
-            exit()
-
-        for _ in range(2):
-            driver.execute_script("window.scrollBy(0, 800);")
-            time.sleep(1.0)
-
-        # Parse flights
-        tickets = driver.find_elements(
-            By.XPATH,
-            "//div[@class='m-result-list']//div[contains(@class,'result-item')]",
-        )
-
-        print(f"Found flights: {len(tickets)}\n")
-
-        for ticket in tickets:
+            # Wait for list
             try:
-                flights.append(parse_ticket(ticket))
-            except Exception as e:
-                print("Error while parsing ticket:", e)
+                wait.until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, ".m-result-list"))
+                )
+            except TimeoutException:
+                print("Flight results not loaded — page may be blocking headless browser")
+                # driver.save_screenshot("tripcom_timeout.png")
+                driver.quit()
+                exit()
 
-    return flights
+            for _ in range(2):
+                driver.execute_script("window.scrollBy(0, 800);")
+                time.sleep(1.0)
+
+            # Parse flights
+            tickets = driver.find_elements(
+                By.XPATH,
+                "//div[@class='m-result-list']//div[contains(@class,'result-item')]",
+            )
+
+            print(f"Found flights: {len(tickets)}\n")
+
+            for ticket in tickets:
+                try:
+                    flights.append(parse_ticket(ticket))
+                except Exception as e:
+                    print("Error while parsing ticket:", e)
+
+        return flights
+    except TimeoutException:
+        print("TimeoutException")
 
 
 # -----------------------------

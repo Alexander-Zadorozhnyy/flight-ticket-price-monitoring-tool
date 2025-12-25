@@ -11,8 +11,12 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import undetected_chromedriver as uc
 
-# https://www.kupibilet.ru/search?adult=1&cabinClass=Y&child=0&infant=0&route[0]=iatax:LED_2025-12-11_date_2025-12-11_iatax:MOW&route[1]=iatax:MOW_2025-12-14_date_2025-12-14_iatax:LED
-# https://www.kupibilet.ru/search?adult=1&cabinClass=Y&child=0&infant=0&route[0]=iatax:LED_2025-12-11_date_2025-12-11_iatax:SVO&route[1]=iatax:SVO_2025-12-14_date_2025-12-14_iatax:LED
+
+def adjust_date(num):
+    if num < 10:
+        return f"0{num}"
+
+    return num
 
 
 def construct_url(
@@ -22,10 +26,10 @@ def construct_url(
     return_date: Optional[datetime],
     adults: int,
 ):
-    url = f"https://www.kupibilet.ru/search?adult={adults}&cabinClass=Y&child=0&infant=0&route[0]=iatax:{origin}_{departure_date.year}-{departure_date.month}-{departure_date.day}_date_{departure_date.year}-{departure_date.month}-{departure_date.day}_iatax:{destination}"
+    url = f"https://www.kupibilet.ru/search?adult={adults}&cabinClass=Y&child=0&infant=0&route[0]=iatax:{origin}_{departure_date.year}-{adjust_date(departure_date.month)}-{adjust_date(departure_date.day)}_date_{departure_date.year}-{adjust_date(departure_date.month)}-{adjust_date(departure_date.day)}_iatax:{destination}"
 
     if return_date:
-        url += f"&route[1]=iatax:{destination}_{return_date.year}-{return_date.month}-{return_date.day}_date_{return_date.year}-{return_date.month}-{return_date.day}_iatax:{origin}"
+        url += f"&route[1]=iatax:{destination}_{return_date.year}-{adjust_date(return_date.month)}-{adjust_date(return_date.day)}_date_{return_date.year}-{adjust_date(return_date.month)}-{adjust_date(return_date.day)}_iatax:{origin}"
 
     return url
 
@@ -101,7 +105,7 @@ def scrape_flights(
     origin: str,
     destination: str,
     departure_date: datetime,
-    return_date: Optional[datetime],
+    return_date: Optional[datetime] = None,
     adults: int = 1,
     options: Optional[webdriver.ChromeOptions] = None,
 ) -> list:
@@ -124,6 +128,9 @@ def scrape_flights(
     flights = []
 
     if options is None:
+        # -----------------------------
+        # HEADLESS CHROME OPTIONS
+        # -----------------------------
         options = webdriver.ChromeOptions()
         options.add_argument("--headless=new")  # Modern headless mode
         options.add_argument("--no-sandbox")
@@ -133,62 +140,58 @@ def scrape_flights(
         options.add_argument("--disable-blink-features=AutomationControlled")
 
     # Create driver in HEADLESS mode
-    with uc.Chrome(
-        service=Service(ChromeDriverManager().install()), options=options
-    ) as driver:
-        driver.get(url)
-        wait = WebDriverWait(driver, 25)
+    try:
+        with uc.Chrome(
+            driver_executable_path="/home/airflow/chromedriver",  # ✅ system driver
+            browser_executable_path="/usr/bin/chromium",  # ✅ system chromium
+            options=options,
+            # service=Service(ChromeDriverManager().install()), options=options
+        ) as driver:
+            driver.get(url)
+            wait = WebDriverWait(driver, 25)
 
-        # Wait for list
-        try:
-            wait.until(
-                EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, '[data-testid="serp-ticket-item"]')
-                )
-            )
-        except TimeoutException:
-            print("Flight results not loaded — page may be blocking headless browser")
-            driver.save_screenshot("tripcom_timeout.png")
-            driver.quit()
-            exit()
-
-        # Parse flights
-        tickets = driver.find_elements(
-            By.CSS_SELECTOR, '[data-testid="serp-ticket-item"]'
-        )
-
-        print(f"Found flights: {len(tickets)}\n")
-
-        for ticket in tickets:
+            # Wait for list
             try:
-                flights.append(parse_ticket(ticket))
-            except Exception as e:
-                print("Error while parsing ticket:", e)
+                wait.until(
+                    EC.presence_of_element_located(
+                        (By.CSS_SELECTOR, '[data-testid="serp-ticket-item"]')
+                    )
+                )
+            except TimeoutException:
+                print(
+                    "Flight results not loaded — page may be blocking headless browser"
+                )
+                # driver.save_screenshot("tripcom_timeout.png")
+                driver.quit()
+                exit()
 
+            # Parse flights
+            tickets = driver.find_elements(
+                By.CSS_SELECTOR, '[data-testid="serp-ticket-item"]'
+            )
+
+            print(f"Found flights: {len(tickets)}\n")
+
+            for ticket in tickets:
+                try:
+                    flights.append(parse_ticket(ticket))
+                except Exception as e:
+                    print("Error while parsing ticket:", e)
+    except TimeoutException:
+        print("Get Timeout Exception")
     return flights
 
 
-# -----------------------------
-# HEADLESS CHROME OPTIONS
-# -----------------------------
-origin = "LED"
-destination = "SVO"
-ddate = datetime(2025, 12, 11)
-rdate = datetime(2025, 12, 14)
+if __name__ == "__main__":
+    origin = "LED"
+    destination = "SVO"
+    ddate = datetime(2025, 12, 30)
+    rdate = datetime(2025, 12, 31)
 
-options = webdriver.ChromeOptions()
-options.add_argument("--headless=new")  # Modern headless mode
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--disable-gpu")
-options.add_argument("--window-size=1920,1080")
-options.add_argument("--disable-blink-features=AutomationControlled")
-
-flights = scrape_flights(
-    origin=origin,
-    destination=destination,
-    departure_date=ddate,
-    options=options,
-    return_date=rdate,
-)
-print(f"{flights=}")
+    flights = scrape_flights(
+        origin=origin,
+        destination=destination,
+        departure_date=ddate,
+        return_date=rdate,
+    )
+    print(f"{flights=}")
