@@ -51,7 +51,7 @@ x-airflow-common:
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
   #image: ${AIRFLOW_IMAGE_NAME:-extending_airflow:latest}
   build:
-    context: .
+    context: ./airflow
     dockerfile: Dockerfile
   env_file:
     - ${ENV_FILE_PATH:-.env}
@@ -84,7 +84,7 @@ x-airflow-common:
     &airflow-common-depends-on
     postgres:
       condition: service_healthy
-
+  
 services:
   postgres:
     image: postgres:16
@@ -103,6 +103,30 @@ services:
       start_period: 5s
     restart: always
 
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z-cpuv1
+    command: server --console-address ":9001" http://minio/data{1...2}
+    expose:
+      - "9000"
+      - "9001"
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    secrets:
+      - access_key
+      - secret_key
+    env_file:
+      - ${ENV_FILE_PATH:-.env}
+    hostname: minio
+    volumes:
+      - data1-1:/data1
+      - data1-2:/data2
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    
   airflow-apiserver:
     <<: *airflow-common
     command: api-server
@@ -278,3 +302,17 @@ services:
 
 volumes:
   postgres-db-volume:
+  data1-1:
+  data1-2:
+
+secrets:
+  access_key:
+    file: ./secrets/minio_access_key.txt
+  secret_key:
+    file: ./secrets/minio_secret_key.txt
+
+# # Generate random access key (20 characters)
+# ACCESS_KEY=$(openssl rand -base64 15 | tr -d '/+=' | cut -c1-20)
+
+# Generate random secret key (40 characters)
+# SECRET_KEY=$(openssl rand -base64 30 | tr -d '/+=' | cut -c1-40)
