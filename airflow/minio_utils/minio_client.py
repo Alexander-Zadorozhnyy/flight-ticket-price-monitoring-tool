@@ -1,9 +1,8 @@
 import json
 from minio import Minio
 from minio.error import S3Error
-import os
 from io import BytesIO
-from typing import Optional, Dict, List, Union
+from typing import Optional, Dict, List
 
 
 class MinIOClient:
@@ -28,6 +27,16 @@ class MinIOClient:
         except S3Error as e:
             print(f"Error creating bucket: {e}")
             return False
+
+    def upload_dict(
+        self,
+        bucket_name: str,
+        data: dict,
+        object_name: str,
+        metadata: Optional[Dict] = None,
+    ):
+        json_data = json.dumps(data).encode("utf-8")
+        return self.upload_file(bucket_name, json_data, object_name, metadata)
 
     def upload_file(
         self,
@@ -92,17 +101,17 @@ if __name__ == "__main__":
     )
 
     # Create bucket
-    minio_client.create_bucket("airline-data")
+    # minio_client.create_bucket("airline-data-raw")
 
     # Upload data
-    json_data = json.dumps({"key": "value", "message": "Hello, MinIO!"}).encode("utf-8")
-    minio_client.upload_file("airline-data", json_data, "file.json")
-    
-    # List files
-    files = minio_client.list_files("airline-data")
+    # json_data = json.dumps({"key": "value", "message": "Hello, MinIO!"}).encode("utf-8")
+    # minio_client.upload_file("airline-data", json_data, "file.json")
+
+    # # List files
+    files = minio_client.list_files("kypibilet-raw-data")
     print(f"Files in bucket: {files}")
-    
-    # Read file
-    data = minio_client.read_file_to_memory("airline-data", "file.json")
-    
+
+    # # Read file
+    data = minio_client.read_file_to_memory("kypibilet-raw-data", "route_2_2025-12-26T20:48:42.498534")
+
     print(f"Read data: {json.loads(data.decode('utf-8'))}" if data else "No data found")

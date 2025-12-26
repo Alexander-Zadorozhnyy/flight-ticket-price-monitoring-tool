@@ -1,3 +1,5 @@
+import os
+from minio_utils.minio_client import MinIOClient
 from db.dao.route import RouteDAO
 from db.dao.request import RequestDAO
 from db.session import get_db
@@ -29,3 +31,12 @@ def get_route_dao() -> RouteDAO:
             next(db_gen)
         except StopIteration:
             pass
+        
+        
+def get_minio_client():
+    return MinIOClient(
+        endpoint=os.getenv("MINIO_ENDPOINT", "minio:9000"),
+        access_key=os.getenv("MINIO_ACCESS_KEY"),
+        secret_key=os.getenv("MINIO_SECRET_KEY"),
+        secure=False,
+    )

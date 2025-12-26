@@ -1,6 +1,6 @@
 from datetime import datetime
 import re
-from typing import Optional
+from typing import Dict, List, Optional
 
 from impit import TimeoutException
 from selenium import webdriver
@@ -34,7 +34,7 @@ def construct_url(
     return url
 
 
-def parse_ticket(ticket):
+def parse_ticket(ticket) -> dict:
     get = lambda selector: ticket.find_element(By.CSS_SELECTOR, selector)
     gettext = lambda selector: get(selector).text.strip()
 
@@ -108,14 +108,14 @@ def scrape_flights(
     return_date: Optional[datetime] = None,
     adults: int = 1,
     options: Optional[webdriver.ChromeOptions] = None,
-) -> list:
+) -> Optional[List[Dict]]:
     """
     Scrape flights from KupiBilet.ru website.
 
     Args:
         origin: IATA code of departure airport (e.g., 'LED')
         destination: IATA code of arrival airport (e.g., 'SVO')
-        departure_date: Departure date in format 'MMDD' (e.g., '0406' for April 6th)
+        departure_date: datetime object
         options: Chrome options for Selenium (optional)
 
     Returns:
@@ -142,13 +142,11 @@ def scrape_flights(
     # Create driver in HEADLESS mode
     try:
         with uc.Chrome(
-            driver_executable_path="/home/airflow/chromedriver",  # ✅ system driver
-            browser_executable_path="/usr/bin/chromium",  # ✅ system chromium
             options=options,
             # service=Service(ChromeDriverManager().install()), options=options
         ) as driver:
             driver.get(url)
-            wait = WebDriverWait(driver, 25)
+            wait = WebDriverWait(driver, 40)
 
             # Wait for list
             try:
@@ -163,7 +161,7 @@ def scrape_flights(
                 )
                 # driver.save_screenshot("tripcom_timeout.png")
                 driver.quit()
-                exit()
+                return None
 
             # Parse flights
             tickets = driver.find_elements(
@@ -177,8 +175,11 @@ def scrape_flights(
                     flights.append(parse_ticket(ticket))
                 except Exception as e:
                     print("Error while parsing ticket:", e)
+                    continue
     except TimeoutException:
         print("Get Timeout Exception")
+        return None
+
     return flights
 
 

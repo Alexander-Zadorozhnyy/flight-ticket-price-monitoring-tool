@@ -22,7 +22,7 @@ class RouteDAO(BaseDao):
 
         return query.offset(skip).limit(limit).all()
 
-    def get_by_request_id(self, request_id: int) -> List:
+    def get_by_request_id(self, request_id: int) -> List[Route]:
         return (
             self.db.query(Route).filter(Route.request_id == request_id).all()
         )
