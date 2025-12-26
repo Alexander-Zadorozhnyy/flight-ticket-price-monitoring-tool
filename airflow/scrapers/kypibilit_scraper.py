@@ -1,4 +1,5 @@
 from datetime import datetime
+import random
 import re
 from typing import Dict, List, Optional
 
@@ -137,14 +138,14 @@ def scrape_flights(
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
         options.add_argument("--window-size=1920,1080")
+        # options.add_argument(f'--user-data-dir=/tmp/chrome_profile_{id}')
         options.add_argument("--disable-blink-features=AutomationControlled")
 
     # Create driver in HEADLESS mode
     try:
-        with uc.Chrome(
-            options=options,
-            # service=Service(ChromeDriverManager().install()), options=options
-        ) as driver:
+        port = 9515 + random.randint(1, 100)
+        service = Service(executable_path="/home/airflow/chromedriver", port=port)
+        with uc.Chrome(options=options, service=service) as driver:
             driver.get(url)
             wait = WebDriverWait(driver, 40)
 

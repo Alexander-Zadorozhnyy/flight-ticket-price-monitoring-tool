@@ -24,6 +24,7 @@ RUN pip install --no-cache-dir --user -r /requirements.txt
 COPY db/ /opt/airflow/db/
 COPY func/ /opt/airflow/func/
 COPY scrapers/ /opt/airflow/scrapers/
+COPY minio_utils/ /opt/airflow/minio_utils
 
 # Set PYTHONPATH environment variable
 ENV PYTHONPATH=/opt/airflow:$PYTHONPATH

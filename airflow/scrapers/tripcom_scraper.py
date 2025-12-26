@@ -1,13 +1,12 @@
 from datetime import datetime
-import re
+import random
 import time
-from typing import Optional
+from typing import List, Optional
 
 from impit import TimeoutException
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import undetected_chromedriver as uc
@@ -20,10 +19,10 @@ def construct_url(
     return_date: Optional[datetime],
     adults: int,
 ):
-    url = f"https://www.trip.com/flights/showfarefirst?quantity={adults}&dcity={origin}&acity={destination}&ddate={departure_date.year}-{departure_date.month}-{departure_date.day}&triptype=rt&class=y&lowpricesource=searchform&searchboxarg=t&nonstoponly=off&locale=en-XX&curr=RUB"
+    url = f"https://www.trip.com/flights/showfarefirst?quantity={adults}&dcity={origin}&acity={destination}&ddate={departure_date.year}-{departure_date.month}-{departure_date.day}&class=y&lowpricesource=searchform&searchboxarg=t&nonstoponly=off&locale=en-XX&curr=RUB"
 
     if return_date:
-        url += f"&rdate={return_date.year}-{return_date.month}-{return_date.day}"
+        url += f"&triptype=rt&rdate={return_date.year}-{return_date.month}-{return_date.day}"
 
     return url
 
@@ -95,12 +94,12 @@ def scrape_flights(
     origin: str,
     destination: str,
     departure_date: datetime,
-    return_date: Optional[datetime],
+    return_date: Optional[datetime] = None,
     adults: int = 1,
     options: Optional[webdriver.ChromeOptions] = None,
-) -> list:
+) -> Optional[List[dict]]:
     """
-    Scrape flights from KupiBilet.ru website.
+    Scrape flights from Trip.com website.
 
     Args:
         origin: IATA code of departure airport (e.g., 'LED')
@@ -118,6 +117,9 @@ def scrape_flights(
     flights = []
 
     if options is None:
+        # -----------------------------
+        # HEADLESS CHROME OPTIONS
+        # -----------------------------
         options = webdriver.ChromeOptions()
         options.add_argument("--headless=new")  # Modern headless mode
         options.add_argument("--no-sandbox")
@@ -125,14 +127,15 @@ def scrape_flights(
         options.add_argument("--disable-gpu")
         options.add_argument("--window-size=1920,1080")
         options.add_argument("--disable-blink-features=AutomationControlled")
-    
+
     try:
         # Create driver in HEADLESS mode
-        with uc.Chrome(
-            options=options # service=Service(ChromeDriverManager().install()), 
-        ) as driver:
+        port = 9515 + random.randint(1, 100)
+        service = Service( port=port) # executable_path="/home/airflow/chromedriver",
+
+        with uc.Chrome(options=options, service=service) as driver:
             driver.get(url)
-            wait = WebDriverWait(driver, 25)
+            wait = WebDriverWait(driver, 40)
 
             # Wait for list
             try:
@@ -140,10 +143,12 @@ def scrape_flights(
                     EC.presence_of_element_located((By.CSS_SELECTOR, ".m-result-list"))
                 )
             except TimeoutException:
-                print("Flight results not loaded — page may be blocking headless browser")
+                print(
+                    "Flight results not loaded — page may be blocking headless browser"
+                )
                 # driver.save_screenshot("tripcom_timeout.png")
                 driver.quit()
-                exit()
+                return None
 
             for _ in range(2):
                 driver.execute_script("window.scrollBy(0, 800);")
@@ -162,33 +167,24 @@ def scrape_flights(
                     flights.append(parse_ticket(ticket))
                 except Exception as e:
                     print("Error while parsing ticket:", e)
+                    continue
 
         return flights
     except TimeoutException:
         print("TimeoutException")
+        return None
 
 
-# -----------------------------
-# HEADLESS CHROME OPTIONS
-# -----------------------------
-origin = "LED"
-destination = "SVO"
-ddate = datetime(2025, 12, 11)
-rdate = datetime(2025, 12, 14)
+if __name__ == "__main__":
+    origin = "LED"
+    destination = "SVO"
+    ddate = datetime(2026, 1, 10)
+    #rdate = datetime(2026, 10, 15)
 
-options = webdriver.ChromeOptions()
-options.add_argument("--headless=new")  # Modern headless mode
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--disable-gpu")
-options.add_argument("--window-size=1920,1080")
-options.add_argument("--disable-blink-features=AutomationControlled")
-
-flights = scrape_flights(
-    origin=origin,
-    destination=destination,
-    departure_date=ddate,
-    options=options,
-    return_date=rdate,
-)
-print(f"{flights=}")
+    flights = scrape_flights(
+        origin=origin,
+        destination=destination,
+        departure_date=ddate,
+        return_date=None, # rdate,
+    )
+    print(f"{flights=}")
