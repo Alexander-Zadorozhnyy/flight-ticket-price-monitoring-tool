@@ -22,7 +22,6 @@ class Flight(BaseModel):
         Integer,
         ForeignKey("routes.id", ondelete="CASCADE"),
         nullable=False,
-        unique=True,
     )
     airline_code = Column(String(10), nullable=False, index=True)
     departure_at = Column(DateTime, nullable=False)

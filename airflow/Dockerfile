@@ -22,9 +22,10 @@ RUN pip install --user --upgrade pip
 RUN pip install --no-cache-dir --user -r /requirements.txt
 
 COPY db/ /opt/airflow/db/
-COPY func/ /opt/airflow/func/
+COPY utils/ /opt/airflow/utils/
 COPY scrapers/ /opt/airflow/scrapers/
 COPY minio_utils/ /opt/airflow/minio_utils
+COPY transformers/ /opt/airflow/transformers
 
 # Set PYTHONPATH environment variable
 ENV PYTHONPATH=/opt/airflow:$PYTHONPATH

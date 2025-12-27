@@ -3,6 +3,8 @@ import sys
 
 sys.path.insert(0, os.getcwd())
 
+from db.dao.flight_price import FlightPriceDAO
+from db.dao.flight import FlightDAO
 from db.dao.search_session import SearchSessionDAO
 from db.dao.route import RouteDAO
 from db.dao.request import RequestDAO
@@ -39,6 +41,34 @@ def get_route_dao() -> RouteDAO:
             pass
 
 
+def get_flight_dao() -> FlightDAO:
+    db_gen = get_db()
+    db = next(db_gen)
+
+    try:
+        return FlightDAO(db)
+    finally:
+        # Close the generator properly
+        try:
+            next(db_gen)
+        except StopIteration:
+            pass
+
+
+def get_flight_price_dao() -> FlightPriceDAO:
+    db_gen = get_db()
+    db = next(db_gen)
+
+    try:
+        return FlightPriceDAO(db)
+    finally:
+        # Close the generator properly
+        try:
+            next(db_gen)
+        except StopIteration:
+            pass
+
+
 def get_session_dao() -> SearchSessionDAO:
     db_gen = get_db()
     db = next(db_gen)
@@ -65,8 +95,8 @@ def get_minio_client():
 if __name__ == "__main__":
     dao = get_session_dao()
     ses = dao.get_grouped_sessions(status="init")
-    
+
     for k, v in ses.items():
         ses[k] = [s.to_dict() for s in v]
-            
+
     print(ses)

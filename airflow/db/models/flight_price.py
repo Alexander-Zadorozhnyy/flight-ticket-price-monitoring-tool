@@ -14,13 +14,11 @@ class FlightPrice(Base):
         Integer,
         ForeignKey("flights.id", ondelete="CASCADE"),
         nullable=False,
-        unique=True,
     )
     search_session_id = Column(
         Integer,
         ForeignKey("search_sessions.id", ondelete="CASCADE"),
         nullable=False,
-        unique=True,
     )
     
     found_at = Column(DateTime, nullable=False)

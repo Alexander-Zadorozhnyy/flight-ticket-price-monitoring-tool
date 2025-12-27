@@ -124,7 +124,6 @@ class MinIOClient:
                         # Parse JSON content
                         json_content = json.loads(file_data.decode("utf-8"))
                         result[filename] = json_content
-                        # print(f"Loaded file: {filename}")
 
                 except json.JSONDecodeError as e:
                     print(f"Error parsing JSON from {filename}: {e}")

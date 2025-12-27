@@ -16,6 +16,8 @@ class KypibiletDataTransformer:
                 )
                 result.append(structured_output)
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 print(f"Error while transforming flight data: {str(e)}")
                 continue
 
