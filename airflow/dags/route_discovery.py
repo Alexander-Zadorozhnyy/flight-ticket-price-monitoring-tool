@@ -13,7 +13,7 @@ from func.trip_inverval import generate_trip_intervals
 default_args = {"owner": "alex_zdrn", "retries": 5, "retry_delay": timedelta(minutes=5)}
 
 with DAG(
-    "route_discovery_dag",
+    "route_discovery_dag_v2",
     default_args=default_args,
     schedule="*/5 * * * *",
     catchup=False,
@@ -45,12 +45,12 @@ with DAG(
         all_routes = {}
         for request in requests:
             print(
-                f"Processing request: {request=}, {type(request["departure_start_period"])=}, {type(request["departure_end_period"])=}"
+                f"Processing request: {request=}, {type(request["departure_start_period"])=}, {type(request["return_end_period"])=}"
             )
 
             intervals = generate_trip_intervals(
                 start_date=datetime.fromisoformat(request["departure_start_period"]),
-                end_date=datetime.fromisoformat(request["departure_end_period"]),
+                end_date=datetime.fromisoformat(request["return_end_period"]),
                 departure_days=get_options(
                     request.get("departure_options", {}), "preferred_days", None
                 ),
@@ -80,19 +80,25 @@ with DAG(
         dao = get_route_dao()
 
         ti = context["ti"]
+        departure_added, arrival_added = set(), set()
         routes = ti.xcom_pull(task_ids="expand_routes")
         for request_id, interval_data in routes.items():
             for interval in interval_data["intervals"]:
-                dao.create(
-                    {
-                        "request_id": request_id,
-                        "departure": interval_data["departure"],
-                        "arrival": interval_data["arrival"],
-                        "departure_date": interval["departure_date"],
-                        "route_type": "to_destination",
-                    }
-                )
-                if interval_data["round_trip"]:
+                if interval["departure_date"] not in departure_added:
+                    dao.create(
+                        {
+                            "request_id": request_id,
+                            "departure": interval_data["departure"],
+                            "arrival": interval_data["arrival"],
+                            "departure_date": interval["departure_date"],
+                            "route_type": "to_destination",
+                        }
+                    )
+                    departure_added.add(interval["departure_date"])
+                if (
+                    interval_data["round_trip"]
+                    and interval["return_date"] not in arrival_added
+                ):
                     dao.create(
                         {
                             "request_id": request_id,
@@ -102,6 +108,7 @@ with DAG(
                             "route_type": "return",
                         }
                     )
+                    arrival_added.add(interval["return_date"])
 
         return list(routes.keys())
 

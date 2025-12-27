@@ -12,6 +12,7 @@ class SearchSession(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     search_at = Column(DateTime, default=datetime.utcnow)
     site_aggregator = Column(String(50), nullable=False)
+    status = Column(String(50), default="init")
     
     # Relationship
     price = relationship("FlightPrice", back_populates="search_session")

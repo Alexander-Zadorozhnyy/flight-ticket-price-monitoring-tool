@@ -223,14 +223,14 @@ if __name__ == "__main__":
 
     # # Пример 2: Поездки на 7 дней с гибкостью
     # print("Пример 2: Поездки на 7±2 дня с вылетом в пн/вт и возвращением в пт/сб")
-    intervals = generate_trip_intervals_with_flexibility(
-        start_date=datetime(2026, 6, 1),
-        end_date=datetime(2026, 8, 31),
-        departure_days=[Weekday.MONDAY.value, Weekday.TUESDAY.value],
+    intervals = generate_trip_intervals(
+        start_date=datetime(2026, 1, 10),
+        end_date=datetime(2026, 1, 14),
+        departure_days=[0, 1, 2, 3, 4, 5, 6],
         return_days=[Weekday.FRIDAY.value, Weekday.SATURDAY.value],
         desired_duration=7,
         duration_variance=2,
-        flex_days=1,
+        # flex_days=1,
     )
     print(intervals)
     # for i, interval in enumerate(intervals[:5], 1):

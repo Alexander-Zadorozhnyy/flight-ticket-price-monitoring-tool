@@ -12,7 +12,7 @@ class Request(BaseModel):
     user_id = Column(Integer, ForeignKey("users.id"))
     departure = Column(String(10), nullable=False, index=True)
     departure_start_period = Column(DateTime, nullable=False)
-    departure_end_period = Column(DateTime, nullable=True)
+    return_end_period = Column(DateTime, nullable=True)
     departure_options = Column(JSON, nullable=True)  # e.g., preferred airports
 
     arrival = Column(String(10), nullable=False, index=True)

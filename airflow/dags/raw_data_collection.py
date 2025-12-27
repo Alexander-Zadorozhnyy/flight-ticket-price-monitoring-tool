@@ -8,7 +8,12 @@ from minio_utils.buckets import Bucket
 from scrapers.kypibilit_scraper import scrape_flights as kypibilet_scrape_fligths
 from scrapers.tripcom_scraper import scrape_flights as tripcom_scrape_fligths
 from db.models.request import Request
-from db.dependencies import get_minio_client, get_request_dao, get_route_dao
+from db.dependencies import (
+    get_minio_client,
+    get_request_dao,
+    get_route_dao,
+    get_session_dao,
+)
 
 default_args = {"owner": "alex_zdrn", "retries": 5, "retry_delay": timedelta(minutes=5)}
 
@@ -125,10 +130,42 @@ with DAG(
 
         return session_time
 
-    # Task 3: Collect raw data using kypibilet (Python function)
+    # Task 4: Collect raw data using tripcom (Python function)
     collect_raw_data_by_tripcom_task = PythonOperator(
         task_id="collect_raw_data_by_tripcom",
         python_callable=collect_raw_data_by_tripcom,
+    )
+
+    def save_sessions(**context):
+        ti = context["ti"]
+        dao = get_session_dao()
+
+        session_time: datetime = datetime.fromisoformat(
+            ti.xcom_pull(task_ids="collect_raw_data_by_kypibilet")
+        )
+        dao.create(
+            obj_data={
+                "search_at": session_time,
+                "site_aggregator": Bucket.Kypibilet.name,
+                "status": "init",
+            }
+        )
+
+        session_time: datetime = datetime.fromisoformat(
+            ti.xcom_pull(task_ids="collect_raw_data_by_tripcom")
+        )
+        dao.create(
+            obj_data={
+                "search_at": session_time,
+                "site_aggregator": Bucket.Tripcom.name,
+                "status": "init",
+            }
+        )
+
+    # Task 5: Save session data for future ETL
+    save_sessions_task = PythonOperator(
+        task_id="save_sessions",
+        python_callable=save_sessions,
     )
 
     # Set task dependencies
@@ -137,4 +174,5 @@ with DAG(
         >> fetch_routes_to_collect_task
         >> collect_raw_data_by_kypibilet_task
         >> collect_raw_data_by_tripcom_task
+        >> save_sessions_task
     )
