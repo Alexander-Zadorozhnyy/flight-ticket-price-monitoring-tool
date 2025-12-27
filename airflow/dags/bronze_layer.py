@@ -5,6 +5,8 @@ from typing import Dict, List
 from airflow import DAG
 from airflow.providers.standard.operators.python import PythonOperator
 
+from transformers.structure_data_tripcom import TripcomDataTransformer
+from transformers.bronze_data_processor import BronzeDataProcessor
 from transformers.structure_data_kypibilet import KypibiletDataTransformer
 from minio_utils.buckets import Bucket
 from db.models import SearchSession
@@ -19,7 +21,7 @@ from db.dependencies import (
 default_args = {"owner": "alex_zdrn", "retries": 5, "retry_delay": timedelta(minutes=5)}
 
 with DAG(
-    "bronze_layer_processing_v8",
+    "bronze_layer_processing_v9",
     default_args=default_args,
     schedule="*/5 * * * *",
     catchup=False,
@@ -42,9 +44,17 @@ with DAG(
         python_callable=fetch_init_sessions,
     )
 
-    # Task 2: Transform all flights from (Python function)
+    # Task 2.1: Transform all flights from Kypibilet (Python function)
     def transform_kypibilet_sessions(**context):
         ti = context["ti"]
+
+        sessions: Dict[str, List[dict]] = ti.xcom_pull(task_ids="fetch_init_sessions")
+        need_sessions: List[dict] = sessions.get(Bucket.Kypibilet.name, [])
+
+        if not need_sessions:
+            print("No data to transform!")
+            return None
+
         route_dao = get_route_dao()
         flight_dao = get_flight_dao()
         flight_price_dao = get_flight_price_dao()
@@ -52,91 +62,19 @@ with DAG(
 
         minio_client = get_minio_client()
 
-        transformer = KypibiletDataTransformer()
+        processor = BronzeDataProcessor(
+            transformer=KypibiletDataTransformer(),
+            minio_client=minio_client,
+            route_dao=route_dao,
+            flight_dao=flight_dao,
+            flight_price_dao=flight_price_dao,
+        )
 
-        sessions: Dict[str, List[dict]] = ti.xcom_pull(
-            task_ids="fetch_init_sessions"
-        )  #
-        need_sessions: List[dict] = sessions.get(Bucket.Kypibilet.name, [])
+        processed_sessions = processor.process_sessions(
+            sessions=need_sessions, bucket_name=Bucket.Kypibilet.value
+        )
 
-        if not need_sessions:
-            print("No data to transform!")
-            return None
-
-        for s in need_sessions:
-            session_time = s.get("search_at", None)
-            transformed_data = {}
-
-            if session_time is None:
-                continue
-
-            route_flights = minio_client.get_files_by_time(
-                Bucket.Kypibilet.value, session_time
-            )
-
-            for filename, flights in route_flights.items():
-                route_id = int(filename.split("_")[1])
-                route = route_dao.get(route_id)
-
-                if route is None:
-                    continue
-
-                data = transformer.structure_flight_output_list(
-                    flights.get("flights", []), route.departure_date
-                )
-
-                if data:
-                    transformed_data[route_id] = data
-
-            for route_id, flights in transformed_data.items():
-                for flight in flights:
-                    try:
-                        flight_obj = flight_dao.find_by_params(
-                            route_id=route_id,
-                            departure_at=datetime.fromisoformat(
-                                flight["departure"]["datetime"]
-                            ),
-                            arrival_at=datetime.fromisoformat(
-                                flight["arrival"]["datetime"]
-                            ),
-                            airline_code=flight["airline"],
-                        )
-
-                        if not flight_obj:
-                            flight_obj = flight_dao.create(
-                                obj_data=dict(
-                                    route_id=route_id,
-                                    airline_code=flight["airline"],
-                                    departure_at=datetime.fromisoformat(
-                                        flight["departure"]["datetime"]
-                                    ),
-                                    arrival_at=datetime.fromisoformat(
-                                        flight["arrival"]["datetime"]
-                                    ),
-                                    duration=flight["duration"]["total_minutes"],
-                                    is_direct=flight["stops"]["is_direct"],
-                                    stop_count=flight["stops"]["count"],
-                                    baggage_included=flight["services"]["baggage"],
-                                    baggage_type=flight["services"]["baggage_type"],
-                                    seats_left=flight["services"]["seats_left"],
-                                )
-                            )
-                        flight_price_dao.create(
-                            obj_data=dict(
-                                flight_id=flight_obj.id,
-                                search_session_id=s["id"],
-                                found_at=datetime.fromisoformat(session_time),
-                                amount=flight["price"]["amount"],
-                                currency=flight["price"]["currency"],
-                                cashback_amount=flight["price"].get("cashback_amount"),
-                                cashback_currency=flight["price"].get(
-                                    "cashback_currency"
-                                ),
-                            )
-                        )
-                    except Exception as e:
-                        print(f"Error while creating db objects: {str(e)}")
-
+        for s in processed_sessions:
             session_dao.update(session_dao.get(s["id"]), {"status": "proceed"})
 
     transform_kypibilet_task = PythonOperator(
@@ -144,5 +82,49 @@ with DAG(
         python_callable=transform_kypibilet_sessions,
     )
 
+    # Task 2.2: Transform all flights from Tripcom (Python function)
+    def transform_tripcom_sessions(**context):
+        ti = context["ti"]
+
+        sessions: Dict[str, List[dict]] = ti.xcom_pull(task_ids="fetch_init_sessions")
+        need_sessions: List[dict] = sessions.get(Bucket.Tripcom.name, [])
+
+        if not need_sessions:
+            print("No data to transform!")
+            return None
+
+        route_dao = get_route_dao()
+        flight_dao = get_flight_dao()
+        flight_price_dao = get_flight_price_dao()
+        session_dao = get_session_dao()
+
+        minio_client = get_minio_client()
+
+        processor = BronzeDataProcessor(
+            transformer=TripcomDataTransformer(
+                airline_codes_file="/opt/airflow/transformers/utils/airline_codes_simple.json",
+            ),
+            minio_client=minio_client,
+            route_dao=route_dao,
+            flight_dao=flight_dao,
+            flight_price_dao=flight_price_dao,
+        )
+        try:
+            processed_sessions = processor.process_sessions(
+                sessions=need_sessions, bucket_name=Bucket.Tripcom.value
+            )
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return
+
+        for s in processed_sessions:
+            session_dao.update(session_dao.get(s["id"]), {"status": "proceed"})
+
+    transform_tripcom_task = PythonOperator(
+        task_id="transform_tripcom",
+        python_callable=transform_tripcom_sessions,
+    )
+
     # Set task dependencies
-    fetch_init_sessions_task >> transform_kypibilet_task
+    fetch_init_sessions_task >> [transform_kypibilet_task, transform_tripcom_task]

@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import re
 
@@ -14,9 +14,11 @@ class KypibiletDataTransformer:
                 structured_output = self.structure_flight_output(
                     flight_dict=flight, departure_date=departure_date
                 )
-                result.append(structured_output)
+                if structured_output:
+                    result.append(structured_output)
             except Exception as e:
                 import traceback
+
                 traceback.print_exc()
                 print(f"Error while transforming flight data: {str(e)}")
                 continue
@@ -26,11 +28,14 @@ class KypibiletDataTransformer:
     # Function to create structured output with specific fields
     def structure_flight_output(
         self, flight_dict: Dict[str, Any], departure_date
-    ) -> Dict[str, Any]:
+    ) -> Optional[Dict[str, Any]]:
         """
         Create a clean, structured output with only essential fields.
         """
-        normalized = self.normalize_flight_dict(flight_dict, departure_date)
+        try:
+            normalized = self.normalize_flight_dict(flight_dict, departure_date)
+        except Exception:
+            return None
 
         structured = {
             # Basic flight info
@@ -270,7 +275,9 @@ if __name__ == "__main__":
     tr = KypibiletDataTransformer()
 
     # Test structured output
-    structured = tr.structure_flight_output(raw_flight, departure_date=datetime(2026, 1, 10))
+    structured = tr.structure_flight_output(
+        raw_flight, departure_date=datetime(2026, 1, 10)
+    )
     print(f"Structured output: {structured}")
 
     # import json
