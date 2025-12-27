@@ -44,11 +44,11 @@ class KypibiletDataTransformer:
             # Route info
             "departure": {
                 "airport": normalized.get("departure_airport"),
-                "datetime": normalized.get("departure_datetime").isoformat(),
+                "datetime": normalized.get("departure_datetime").isoformat(),  # type: ignore
             },
             "arrival": {
                 "airport": normalized.get("arrival_airport"),
-                "datetime": normalized.get("arrival_datetime").isoformat(),
+                "datetime": normalized.get("arrival_datetime").isoformat(),  # type: ignore
             },
             # Flight details
             "duration": {
@@ -172,7 +172,7 @@ class KypibiletDataTransformer:
                     minute=minute,
                 )
                 # If arrival time is earlier than departure time, assume next day
-                if arrival_dt < departure_dt:
+                if arrival_dt < departure_dt:  # type: ignore
                     arrival_dt += timedelta(days=1)
             except (ValueError, AttributeError):
                 arrival_dt = None

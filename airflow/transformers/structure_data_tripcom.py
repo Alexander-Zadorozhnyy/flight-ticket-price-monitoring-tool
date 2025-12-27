@@ -8,7 +8,7 @@ import json
 class TripcomDataTransformer:
     """Transformer for Trip.com flight data to standardized schema."""
 
-    def __init__(self, airline_codes_file: str = None):
+    def __init__(self, airline_codes_file: Optional[str] = None):
         """
         Initialize transformer with airline codes.
 
@@ -17,7 +17,7 @@ class TripcomDataTransformer:
         """
         self.airline_codes = self.load_airline_codes(airline_codes_file)
 
-    def load_airline_codes(self, file_path: str = None) -> Dict[str, str]:
+    def load_airline_codes(self, file_path: Optional[str] = None) -> Dict[str, str]:
         """
         Load airline codes from JSON file.
 
