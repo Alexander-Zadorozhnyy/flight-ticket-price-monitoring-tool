@@ -1,9 +1,14 @@
 import os
+import sys
+
+sys.path.insert(0, os.getcwd())
+
 from db.dao.search_session import SearchSessionDAO
-from minio_utils.minio_client import MinIOClient
 from db.dao.route import RouteDAO
 from db.dao.request import RequestDAO
 from db.session import get_db
+
+from minio_utils.minio_client import MinIOClient
 
 
 def get_request_dao() -> RequestDAO:
@@ -55,3 +60,13 @@ def get_minio_client():
         secret_key=os.getenv("MINIO_SECRET_KEY"),
         secure=False,
     )
+
+
+if __name__ == "__main__":
+    dao = get_session_dao()
+    ses = dao.get_grouped_sessions(status="init")
+    
+    for k, v in ses.items():
+        ses[k] = [s.to_dict() for s in v]
+            
+    print(ses)

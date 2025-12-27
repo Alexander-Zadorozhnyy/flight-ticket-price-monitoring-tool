@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 from sqlalchemy.orm import Session
 
 from db.dao.dao import BaseDao
@@ -9,15 +9,22 @@ class SearchSessionDAO(BaseDao):
     def __init__(self, db: Session):
         super().__init__(SearchSession, db)
 
-    def get_all(
+    def get_grouped_sessions(
         self,
-        skip: int = 0,
-        limit: int = 100,
         status: Optional[Literal["init", "proceed", "error"]] = None,
-    ) -> List:
+    ) -> Dict[str, List[SearchSession]]:
         query = self.db.query(SearchSession)
 
         if status:
             query = query.filter(SearchSession.status == status)
 
-        return query.offset(skip).limit(limit).all()
+        # Order by site_aggregator
+        query = query.order_by(SearchSession.site_aggregator)
+
+        # Group manually in Python
+        sessions = query.all()
+        grouped = {}
+        for session in sessions:
+            grouped.setdefault(session.site_aggregator, []).append(session)
+
+        return grouped

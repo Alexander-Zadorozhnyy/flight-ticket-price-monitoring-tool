@@ -2,13 +2,12 @@
 from datetime import datetime, timedelta
 from typing import List
 from airflow import DAG
-from airflow.sdk import dag, task
 from airflow.providers.standard.operators.python import PythonOperator
 
 from db.models.request import Request
 from db.dependencies import get_request_dao, get_route_dao
 
-from func.trip_inverval import generate_trip_intervals
+from utils.trip_inverval import generate_trip_intervals
 
 default_args = {"owner": "alex_zdrn", "retries": 5, "retry_delay": timedelta(minutes=5)}
 

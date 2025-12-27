@@ -1,4 +1,4 @@
-# dags/route_discovery_dag.py
+# dags/raw_data_collection.py
 from datetime import datetime, timedelta
 from typing import List, Tuple
 from airflow import DAG
@@ -22,7 +22,7 @@ with DAG(
     default_args=default_args,
     schedule="0 */3 * * *",
     catchup=False,
-    tags=["routes"],
+    tags=["routes", "data_collection"],
 ) as dag:
 
     def fetch_data_collection_requests(**context):
