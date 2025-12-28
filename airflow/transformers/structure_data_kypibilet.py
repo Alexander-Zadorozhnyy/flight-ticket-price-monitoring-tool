@@ -2,28 +2,12 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import re
 
+from transformers.data_transformer import DataTransformer
 
-class KypibiletDataTransformer:
-    def structure_flight_output_list(
-        self, flights: List[Dict[str, Any]], departure_date
-    ):
-        result = []
 
-        for flight in flights:
-            try:
-                structured_output = self.structure_flight_output(
-                    flight_dict=flight, departure_date=departure_date
-                )
-                if structured_output:
-                    result.append(structured_output)
-            except Exception as e:
-                import traceback
-
-                traceback.print_exc()
-                print(f"Error while transforming flight data: {str(e)}")
-                continue
-
-        return result
+class KypibiletDataTransformer(DataTransformer):
+    def __init__(self):
+        super().__init__()
 
     # Function to create structured output with specific fields
     def structure_flight_output(
@@ -35,6 +19,12 @@ class KypibiletDataTransformer:
         try:
             normalized = self.normalize_flight_dict(flight_dict, departure_date)
         except Exception:
+            return None
+
+        # Check if we have essential fields
+        if not normalized.get("departure_datetime") or not normalized.get(
+            "price_numeric"
+        ):
             return None
 
         structured = {
@@ -279,34 +269,3 @@ if __name__ == "__main__":
         raw_flight, departure_date=datetime(2026, 1, 10)
     )
     print(f"Structured output: {structured}")
-
-    # import json
-
-    # with open("output.json", "w", encoding="utf-8") as outfile:
-    #     json.dump(structured, outfile, indent=4)
-
-
-# def compare_flights(flight1: Dict[str, Any], flight2: Dict[str, Any]) -> Dict[str, Any]:
-#     """
-#     Compare two normalized flights.
-#     """
-#     normalized1 = (
-#         normalize_flight_dict(flight1) if "airlines" not in flight1 else flight1
-#     )
-#     normalized2 = (
-#         normalize_flight_dict(flight2) if "airlines" not in flight2 else flight2
-#     )
-
-#     comparison = {
-#         "price_difference": normalized1["price_numeric"] - normalized2["price_numeric"],
-#         "duration_difference": normalized1["duration_total_minutes"]
-#         - normalized2["duration_total_minutes"],
-#         "is_cheaper": normalized1["price_numeric"] < normalized2["price_numeric"],
-#         "is_faster": normalized1["duration_total_minutes"]
-#         < normalized2["duration_total_minutes"],
-#         "has_baggage_advantage": normalized1["baggage_included"]
-#         and not normalized2["baggage_included"],
-#         "same_airline": normalized1["main_airline"] == normalized2["main_airline"],
-#     }
-
-#     return comparison

@@ -1,5 +1,5 @@
 # dags/bronze_layer.py
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Dict, List
 
 from airflow import DAG
@@ -21,7 +21,7 @@ from db.dependencies import (
 default_args = {"owner": "alex_zdrn", "retries": 5, "retry_delay": timedelta(minutes=5)}
 
 with DAG(
-    "bronze_layer_processing_v9",
+    "bronze_layer_processing_v10",
     default_args=default_args,
     schedule="*/5 * * * *",
     catchup=False,
@@ -75,7 +75,7 @@ with DAG(
         )
 
         for s in processed_sessions:
-            session_dao.update(session_dao.get(s["id"]), {"status": "proceed"})
+            session_dao.update(session_dao.get(s[0]), {"status": "proceed", "quality": s[1]})
 
     transform_kypibilet_task = PythonOperator(
         task_id="transform_kypibilet",
@@ -113,13 +113,14 @@ with DAG(
             processed_sessions = processor.process_sessions(
                 sessions=need_sessions, bucket_name=Bucket.Tripcom.value
             )
-        except Exception as e:
+        except Exception:
             import traceback
+
             traceback.print_exc()
             return
 
         for s in processed_sessions:
-            session_dao.update(session_dao.get(s["id"]), {"status": "proceed"})
+            session_dao.update(session_dao.get(s[0]), {"status": "proceed", "quality": s[1]})
 
     transform_tripcom_task = PythonOperator(
         task_id="transform_tripcom",

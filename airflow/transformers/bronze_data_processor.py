@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
+
 
 from db.dao.flight_price import FlightPriceDAO
 from db.models.flight import Flight
@@ -8,6 +9,7 @@ from db.dao.route import RouteDAO
 from minio_utils.minio_client import MinIOClient
 from transformers.structure_data_tripcom import TripcomDataTransformer
 from transformers.structure_data_kypibilet import KypibiletDataTransformer
+from transformers.quality import Quality, QualityCalculator
 
 
 class BronzeDataProcessor:
@@ -26,7 +28,13 @@ class BronzeDataProcessor:
         self.flight_dao = flight_dao
         self.flight_price_dao = flight_price_dao
 
-    def process_sessions(self, sessions: List[dict], bucket_name: str):
+        self.quality_calculator = QualityCalculator()
+
+    def process_sessions(
+        self, sessions: List[dict], bucket_name: str
+    ) -> List[Tuple[int, dict]]:
+        processed_sessions = []
+
         for s in sessions:
             session_time = s.get("search_at", None)
             transformed_data = {}
@@ -35,8 +43,14 @@ class BronzeDataProcessor:
                 continue
 
             transformed_data = self.get_transformed_data(bucket_name, session_time)
+            qualities = []
 
-            for route_id, flights in transformed_data.items():
+            for route_id, flights_data in transformed_data.items():
+                flights, quality = flights_data
+                qualities.append(quality)
+
+                print(f"{route_id=}, {quality=}")
+
                 for flight_data in flights:
                     try:
                         flight = self.get_flight(route_id, flight_data)
@@ -62,7 +76,10 @@ class BronzeDataProcessor:
                     except Exception as e:
                         print(f"Error creating flight price objects: {str(e)}")
 
-        return sessions
+            processed_sessions.append(
+                [s["id"], self.quality_calculator.merge_batch_qualities(qualities)]
+            )
+        return processed_sessions
 
     def get_transformed_data(self, bucket_name, session_time):
         transformed_data = {}
@@ -75,12 +92,12 @@ class BronzeDataProcessor:
             if route is None:
                 continue
 
-            data = self.transformer.structure_flight_output_list(
+            data, quality = self.transformer.structure_flight_output_list(
                 flights.get("flights", []), route.departure_date
             )
 
-            if data:
-                transformed_data[route_id] = data
+            if data and quality.overall_quality != Quality.VERY_POOR:
+                transformed_data[route_id] = [data, quality]
 
         return transformed_data
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Integer
+from sqlalchemy import Column, String, DateTime, Integer, JSON
 from sqlalchemy.orm import relationship
 
 from db.models.base import BaseModel
@@ -14,6 +14,7 @@ class SearchSession(BaseModel):
     search_at = Column(DateTime, default=datetime.utcnow)
     site_aggregator = Column(String(50), nullable=False)
     status = Column(String(50), default="init")
+    quality = Column(JSON, nullable=True, default=None)
 
     # Relationship
     price = relationship("FlightPrice", back_populates="search_session")
