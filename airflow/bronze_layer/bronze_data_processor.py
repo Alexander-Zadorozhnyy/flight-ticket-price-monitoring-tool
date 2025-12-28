@@ -7,9 +7,9 @@ from db.models.flight import Flight
 from db.dao.flight import FlightDAO
 from db.dao.route import RouteDAO
 from minio_utils.minio_client import MinIOClient
-from transformers.structure_data_tripcom import TripcomDataTransformer
-from transformers.structure_data_kypibilet import KypibiletDataTransformer
-from transformers.quality import Quality, QualityCalculator
+from bronze_layer.structure_data_tripcom import TripcomDataTransformer
+from bronze_layer.structure_data_kypibilet import KypibiletDataTransformer
+from bronze_layer.quality import Quality, QualityCalculator
 
 
 class BronzeDataProcessor:

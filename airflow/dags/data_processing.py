@@ -5,10 +5,12 @@ from typing import Dict, List
 from airflow import DAG
 from airflow.providers.standard.operators.python import PythonOperator
 
-from transformers.structure_data_tripcom import TripcomDataTransformer
-from transformers.bronze_data_processor import BronzeDataProcessor
-from transformers.structure_data_kypibilet import KypibiletDataTransformer
+from bronze_layer.structure_data_tripcom import TripcomDataTransformer
+from bronze_layer.bronze_data_processor import BronzeDataProcessor
+from bronze_layer.structure_data_kypibilet import KypibiletDataTransformer
+from aggregation_layers.view_manager import ViewManager
 from minio_utils.buckets import Bucket
+
 from db.models import SearchSession
 from db.dependencies import (
     get_flight_dao,
@@ -16,12 +18,13 @@ from db.dependencies import (
     get_minio_client,
     get_route_dao,
     get_session_dao,
+    get_simple_db,
 )
 
 default_args = {"owner": "alex_zdrn", "retries": 5, "retry_delay": timedelta(minutes=5)}
 
 with DAG(
-    "bronze_layer_processing_v10",
+    "data_processing_v8",
     default_args=default_args,
     schedule="*/5 * * * *",
     catchup=False,
@@ -45,7 +48,7 @@ with DAG(
     )
 
     # Task 2.1: Transform all flights from Kypibilet (Python function)
-    def transform_kypibilet_sessions(**context):
+    def bronze_layer_transform_kypibilet_sessions(**context):
         ti = context["ti"]
 
         sessions: Dict[str, List[dict]] = ti.xcom_pull(task_ids="fetch_init_sessions")
@@ -75,15 +78,17 @@ with DAG(
         )
 
         for s in processed_sessions:
-            session_dao.update(session_dao.get(s[0]), {"status": "proceed", "quality": s[1]})
+            session_dao.update(
+                session_dao.get(s[0]), {"status": "proceed", "quality": s[1]}
+            )
 
-    transform_kypibilet_task = PythonOperator(
-        task_id="transform_kypibilet",
-        python_callable=transform_kypibilet_sessions,
+    bronze_layer_transform_kypibilet_task = PythonOperator(
+        task_id="bronze_layer_transform_kypibilet",
+        python_callable=bronze_layer_transform_kypibilet_sessions,
     )
 
     # Task 2.2: Transform all flights from Tripcom (Python function)
-    def transform_tripcom_sessions(**context):
+    def bronze_layer_transform_tripcom_sessions(**context):
         ti = context["ti"]
 
         sessions: Dict[str, List[dict]] = ti.xcom_pull(task_ids="fetch_init_sessions")
@@ -102,7 +107,7 @@ with DAG(
 
         processor = BronzeDataProcessor(
             transformer=TripcomDataTransformer(
-                airline_codes_file="/opt/airflow/transformers/utils/airline_codes_simple.json",
+                airline_codes_file="/opt/airflow/bronze_layer/utils/airline_codes_simple.json",
             ),
             minio_client=minio_client,
             route_dao=route_dao,
@@ -120,12 +125,40 @@ with DAG(
             return
 
         for s in processed_sessions:
-            session_dao.update(session_dao.get(s[0]), {"status": "proceed", "quality": s[1]})
+            session_dao.update(
+                session_dao.get(s[0]), {"status": "proceed", "quality": s[1]}
+            )
 
-    transform_tripcom_task = PythonOperator(
-        task_id="transform_tripcom",
-        python_callable=transform_tripcom_sessions,
+    bronze_layer_transform_tripcom_task = PythonOperator(
+        task_id="bronze_layer_transform_tripcom",
+        python_callable=bronze_layer_transform_tripcom_sessions,
+    )
+
+    def silver_layer_processing(**context):
+        view_manager = ViewManager(
+            db=get_simple_db(),
+            views_folder="/opt/airflow/aggregation_layers/silver_views",
+        )
+        view_manager.create_views()
+        view_manager.resresh_views()
+
+    silver_layer_processing_task = PythonOperator(
+        task_id="silver_layer_processing",
+        python_callable=silver_layer_processing,
+    )
+
+    def golden_layer_processing(**context):
+        view_manager = ViewManager(
+            db=get_simple_db(),
+            views_folder="/opt/airflow/aggregation_layers/golden_views",
+        )
+        view_manager.create_views()
+        view_manager.resresh_views()
+
+    golden_layer_processing_task = PythonOperator(
+        task_id="golden_layer_processing",
+        python_callable=golden_layer_processing,
     )
 
     # Set task dependencies
-    fetch_init_sessions_task >> [transform_kypibilet_task, transform_tripcom_task]
+    fetch_init_sessions_task >> [bronze_layer_transform_kypibilet_task, bronze_layer_transform_tripcom_task] >> silver_layer_processing_task >> golden_layer_processing_task

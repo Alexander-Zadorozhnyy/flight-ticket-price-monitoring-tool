@@ -8,7 +8,7 @@ import json
 
 sys.path.insert(0, os.getcwd())
 
-from transformers.data_transformer import DataTransformer
+from bronze_layer.data_transformer import DataTransformer
 
 
 class TripcomDataTransformer(DataTransformer):

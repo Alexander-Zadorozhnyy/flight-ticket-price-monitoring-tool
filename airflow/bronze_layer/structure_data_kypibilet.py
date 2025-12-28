@@ -2,7 +2,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import re
 
-from transformers.data_transformer import DataTransformer
+from bronze_layer.data_transformer import DataTransformer
 
 
 class KypibiletDataTransformer(DataTransformer):

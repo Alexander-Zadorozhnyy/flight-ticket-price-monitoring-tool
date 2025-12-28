@@ -25,7 +25,8 @@ COPY db/ /opt/airflow/db/
 COPY utils/ /opt/airflow/utils/
 COPY scrapers/ /opt/airflow/scrapers/
 COPY minio_utils/ /opt/airflow/minio_utils
-COPY transformers/ /opt/airflow/transformers
+COPY bronze_layer/ /opt/airflow/bronze_layer
+COPY aggregation_layers/ /opt/airflow/aggregation_layers
 
 # Set PYTHONPATH environment variable
 ENV PYTHONPATH=/opt/airflow:$PYTHONPATH

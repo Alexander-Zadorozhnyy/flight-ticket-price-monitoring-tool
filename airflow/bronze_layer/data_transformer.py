@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 
-from transformers.quality import BatchQuality, QualityCalculator
+from bronze_layer.quality import BatchQuality, QualityCalculator
 
 
 class DataTransformer(ABC):

@@ -1,6 +1,8 @@
 import os
 import sys
 
+from sqlalchemy.orm import Session
+
 sys.path.insert(0, os.getcwd())
 
 from db.dao.flight_price import FlightPriceDAO
@@ -11,6 +13,11 @@ from db.dao.request import RequestDAO
 from db.session import get_db
 
 from minio_utils.minio_client import MinIOClient
+
+
+def get_simple_db() -> Session:
+    db_gen = get_db()
+    return next(db_gen)
 
 
 def get_request_dao() -> RequestDAO:

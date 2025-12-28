@@ -27,7 +27,7 @@ class FlightPrice(Base):
     currency = Column(String(3), default="RUB", nullable=False)
     cashback_amount = Column(Numeric(10, 2), nullable=True)
     cashback_currency = Column(String(3), nullable=True)
-
+    
     # Relationship
     flight = relationship("Flight", back_populates="price")
     search_session = relationship("SearchSession", back_populates="price")
