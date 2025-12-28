@@ -88,10 +88,8 @@ x-airflow-common:
 services:
   postgres:
     image: postgres:16
-    environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
+    env_file:
+      - ${ENV_FILE_PATH:-.env}
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
     ports:
@@ -297,9 +295,20 @@ services:
     depends_on:
       <<: *airflow-common-depends-on
 
-  # You can enable flower by adding "--profile flower" option e.g. docker-compose --profile flower up
-  # or by explicitly targeted on the command line e.g. docker-compose up flower.
-  # See: https://docs.docker.com/compose/profiles/
+  visualization-app:
+    build:
+      context: ./visualization_app
+      dockerfile: Dockerfile
+    container_name: visualization-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # db-init:
+      #   condition: service_completed_successfully
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
 
 volumes:
   postgres-db-volume:

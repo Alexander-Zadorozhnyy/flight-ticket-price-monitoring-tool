@@ -11,7 +11,7 @@ if os.path.exists(dotenv_path):
     load_dotenv(dotenv_path)
 
 
-DATABASE_URL = f"postgresql://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{DB_NAME}?sslmode=disable"
+DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{DB_NAME}?sslmode=disable"
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,  # good for avoiding stale connections

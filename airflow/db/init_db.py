@@ -15,7 +15,7 @@ if os.path.exists(dotenv_path):
 
 
 def create_database(db_name):
-    DATABASE_URL = f"postgresql://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{os.getenv('PG_DEFAULT_DATABASE')}"
+    DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DEFAULT_DATABASE')}"
     default_engine = create_engine(
         DATABASE_URL,
         isolation_level="AUTOCOMMIT",
@@ -37,7 +37,7 @@ def create_database(db_name):
 def init_database(db_name):
     create_database(db_name)
     print("Creating all tables...")
-    DATABASE_URL = f"postgresql://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{db_name}?sslmode=disable"
+    DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{db_name}?sslmode=disable"
     engine = create_engine(
         DATABASE_URL,
         pool_pre_ping=True,

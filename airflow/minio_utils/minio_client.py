@@ -153,11 +153,14 @@ if __name__ == "__main__":
 
     # Upload data
     # json_data = json.dumps({"key": "value", "message": "Hello, MinIO!"}).encode("utf-8")
-    # minio_client.upload_file("airline-data", json_data, "file.json")
+    with open(r"F:\itmo\courses\data-engeneering\ticket-price-monitoring-tg-bot\airflow\minio_utils\route_8_2025-12-28T19_55_34.json", "r", encoding='utf-8') as f:
+        data = json.load(f)
+        
+        minio_client.upload_file("kypibilet-raw-data", json.dumps(data).encode("utf-8"), "route_8_2025-12-30T03:00:00.json")
 
     # # List files
-    files = minio_client.list_files("kypibilet-raw-data")
-    print(f"Files in bucket: {files}")
+    # files = minio_client.list_files("kypibilet-raw-data")
+    # print(f"Files in bucket: {files}")
 
     # # # Read file
     # data = minio_client.read_file_to_memory(
@@ -166,5 +169,5 @@ if __name__ == "__main__":
 
     # print(f"Read data: {json.loads(data.decode('utf-8'))}" if data else "No data found")
 
-    data = minio_client.get_files_by_time("kypibilet-raw-data", "2025-12-27T14:06:37")
-    print(f"{data=}")
+    # data = minio_client.get_files_by_time("kypibilet-raw-data", "2025-12-27T14:06:37")
+    # print(f"{data=}")
