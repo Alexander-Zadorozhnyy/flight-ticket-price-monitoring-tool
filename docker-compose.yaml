@@ -320,9 +320,3 @@ secrets:
     file: ./secrets/minio_access_key.txt
   secret_key:
     file: ./secrets/minio_secret_key.txt
-
-# # Generate random access key (20 characters)
-# ACCESS_KEY=$(openssl rand -base64 15 | tr -d '/+=' | cut -c1-20)
-
-# Generate random secret key (40 characters)
-# SECRET_KEY=$(openssl rand -base64 30 | tr -d '/+=' | cut -c1-40)
