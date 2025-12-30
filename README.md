@@ -23,7 +23,7 @@ SkyPrice AI is an intelligent flight ticket monitoring system that collects hist
 - **Historical Data Building**: Continuously collects and archives price data for trend analysis
 - **Automated Scheduling**: Apache Airflow manages all data collection workflows
 
-## Technology Stack [Installation guide](#installation)
+## Technology Stack ([Installation guide](#installation))
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
@@ -228,3 +228,14 @@ MINIO_SECRET_KEY=your_secret_key
 MINIO_SECURE=False
 MINIO_ENDPOINT="minio:9000"
 ```
+
+## Future plans
+
+1. Add telegram bot for comfortable and user-friendly interface;
+2. Add more site aggregators; Add telegram channels scraping for real-time updates;
+3. Add user input request processing instead of raw sql interaction;
+4. Add parallele data scraping; Solve issues with single chromium usage;
+5. Add ml models for price trend prediction;
+6. Add ml model for prediction best price period when user should buy tickets;
+7. Add LLM for custom request handling
+8. ...
