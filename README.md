@@ -37,6 +37,8 @@ SkyPrice AI is an intelligent flight ticket monitoring system that collects hist
 
 ## System Architecture (Course requirements)
 
+Screenshots can be founded at: [screenshot folder](./screenshots/). For example:
+
 ### 1. **Project Scope Definition**
 
 - **Domain**: Travel & Transportation Optimization
@@ -84,6 +86,8 @@ SkyPrice AI is an intelligent flight ticket monitoring system that collects hist
   - Cyclical encoding for time features
   - Route encoding for origin-destination pairs
 
+Screenshots can be founded at: [screenshot folder: 3-5](./screenshots/). For example:
+
 ### 5. **Data Storage**
 
 - **Storage Strategy**:
@@ -94,6 +98,11 @@ SkyPrice AI is an intelligent flight ticket monitoring system that collects hist
   - Dimension tables: Requests, routes, search_sessions, flights and so on
   - Aggregated materizlized views: Daily summaries, trend calculations
 
+Database scructure:
+<p align="center">
+      <img src="./airflow/db/diagrams/TicketPriceMonitoringPG_2025-12-29T22_19_13.633Z.png" alt="DB schema" width="726">
+</p>
+
 ### 6. [**Data Analysis & Visualization**](./visualization_app/visualizations.py)
 
 - Streamlit:
@@ -102,6 +111,12 @@ SkyPrice AI is an intelligent flight ticket monitoring system that collects hist
   - Route comparison tools
   - Historical performance analytics
   - Alert configuration interface
+
+Screenshots can be founded at: [screenshot folder: 6-7](./screenshots/). For example:
+
+<p align="center">
+      <img src="./screenshots/6. streamlit flight history.png" alt="Flight request history" width="726">
+</p>
 
 ### 7. [**Data Quality Assurance**](./visualization_app/quality_visualizations.py)
 
@@ -113,6 +128,12 @@ SkyPrice AI is an intelligent flight ticket monitoring system that collects hist
   - Daily data quality reports
   - Collection success rate monitoring
   - Schema validation and drift detection
+
+Screenshots can be founded at: [screenshot folder: 8-11](./screenshots/). For example:
+
+<p align="center">
+      <img src="./screenshots/9. streamlit quality destribution.png" alt="Quality distribution" width="726">
+</p>
 
 ## Workflow Overview
 
