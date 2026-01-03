@@ -4,6 +4,8 @@
 
 SkyPrice AI is an intelligent flight ticket monitoring system that collects historical price data and provides optimal purchase recommendations. The system automates the entire pipeline from data collection to actionable insights.
 
+Overview presentation in Russian availaible here: [presentation](./presentations/Zadorozhnyi%20A.%20SkyPrice%20AI.pdf)
+
 ## Key Features
 
 ### 🎯 Smart Route Generation
